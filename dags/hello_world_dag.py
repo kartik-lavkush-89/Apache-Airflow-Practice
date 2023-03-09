@@ -1,8 +1,11 @@
 from datetime import datetime, timedelta
 from airflow import DAG
+import sys
 from airflow.operators.python_operator import PythonOperator
 
 
+# sys.path.insert(0,"/home/uslsz0807/Documents/airflow")
+# from dags.config import default_args
 
 default_args = {
     'owner': 'airflow',
@@ -31,7 +34,7 @@ hello_operator = PythonOperator(task_id='hello_task', python_callable=print_hell
 hi_operator = PythonOperator(task_id='hi_task', python_callable=print_hi, dag=dag1)
 hi_operator1 = PythonOperator(task_id='hi_task1', python_callable=print_hi, dag=dag1)
 
-hello_operator >> [hi_operator,hi_operator1]
+hello_operator >> hi_operator >> hi_operator1
  
 
 

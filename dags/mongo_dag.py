@@ -1,4 +1,3 @@
-# from dags.first_dag import default_args
 from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
@@ -15,8 +14,7 @@ default_args = {
 }
 
 
-dag2 = DAG('mongo_crud', description = 'MongoDB', default_args=default_args,
-           )
+dag2 = DAG('mongo', description = 'MongoDB', default_args=default_args)
 
 def userEntity(item) -> dict:
     return {
@@ -28,35 +26,36 @@ def userEntity(item) -> dict:
 conn = MongoClient()
 
 def insert_data(my_param,**kwargs):
-    
     data = my_param
     conn.mydatabase.mycollection.insert_one(data)
     print(data)
     return {"message" : "data_added_successfully"}
 
-def read_data(my_params,**kwargs):
-    name = my_params
-    data = conn.mydatabase.mycollection.find_one({"name": name})
-    print("data found")
+def extract_data(my_param,**kwargs):
+    name = my_param
+    data = conn.mydatabase.mycollection.find_one({"name": "Karan"})
+    print("data_found")
     return userEntity(data)
-
-def update_data():
-    conn.mydatabase.mycollection.find_one_and_update({"name": "John"}, {"$set": {"age": 35}})
-    data = conn.mydatabase.mycollection.find_one({"name": "John"})
+        
+def transform_data(my_param,**kwargs):
+    name = my_param
+    conn.mydatabase.mycollection.find_one_and_update({"name": name}, {"$set": {"age": 35}})
+    data = conn.mydatabase.mycollection.find_one({"name": name})
     print(data)
     return {"message" : "data_updated_successfully"}
 
-def delete_data():
+def delete_data(my_param,**kwargs):
+    name = my_param
     data = conn.mydatabase.mycollection.find_one_and_delete({"name" : "John"})
     print(data)
     return {"message" : "data_deleted_successfully"}
 
 
 dat= {'name': '{{ dag_run.conf["name"]  }}','age': '{{ dag_run.conf["age"] }}'}
-# dat1={'name': '{{ dag_run.conf["name"]  }}'}
-insert_task = PythonOperator(task_id='insert_data', python_callable=insert_data, dag=dag2,op_kwargs={"my_param":{**dat}})
-# read_task = PythonOperator(task_id='read_data', python_callable=read_data, dag=dag2,op_kwargs={"my_param":{**dat1.name}})
-# update_task = PythonOperator(task_id='update_data', python_callable=update_data, dag=dag2)
-# delete_task = PythonOperator(task_id='delete_data', python_callable=delete_data, dag=dag2)
 
-insert_task 
+insert_task = PythonOperator(task_id='insert_data', python_callable=insert_data, dag=dag2,op_kwargs={"my_param":{**dat}})
+extract_task = PythonOperator(task_id='read_data', python_callable=extract_data, dag=dag2,op_kwargs={"my_param":dat['name']})
+transform_task = PythonOperator(task_id='update_data', python_callable=transform_data, dag=dag2,op_kwargs={"my_param":dat['name']})
+# delete_task = PythonOperator(task_id='delete_data', python_callable=delete_data, dag=dag2,op_kwargs={"my_param":dat['name']})
+
+insert_task >> extract_task >> transform_task

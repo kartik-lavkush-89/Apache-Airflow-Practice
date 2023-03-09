@@ -1,8 +1,12 @@
 from datetime import datetime, timedelta
 from airflow import DAG
 import random
+import sys, os
 from twilio.rest import Client
 from airflow.operators.python_operator import PythonOperator
+
+sys.path.insert(0,"/home/uslsz0807/Documents/airflow")
+
 
 default_args = {
     'owner': 'airflow',
@@ -23,20 +27,24 @@ dag3 = DAG('sending_OTP', description = 'OTP', default_args=default_args)
 otp = random.randrange(000000,999999)
 
 
-def send_otp():
+def send_otp(my_param,**kwargs):
     # account_sid = os.environ.get('ACCOUNT_SID')
     # auth_token = os.environ.get('AUTH_TOKEN')
+    phone = my_param
     account_sid = "ACba3ab41cd32568b368e387dca973c30d"
     auth_token = "ca36ffdc79bf68868d094cded7419ff1"
     client = Client(account_sid, auth_token)
     message = client.messages.create(
                     body="Hello! Your otp for registration is - " + str(otp),
                     from_="+16086022741",
-                    to ='+91' + str('8923933990')
+                    to ='+91' + str(phone)
                 )
     print(otp)
     return {"message" : f"OTP_sent {otp}"}
 
-otp_sent = PythonOperator(task_id='send_otp', python_callable=send_otp, dag=dag3)
+dat= {'phone': '{{ dag_run.conf["phone"]  }}'}
+
+
+otp_sent = PythonOperator(task_id='send_otp', python_callable=send_otp, dag=dag3,op_kwargs={"my_param":dat['phone']})
 
 otp_sent
